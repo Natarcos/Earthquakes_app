@@ -357,12 +357,176 @@ try:
                     else:
                         st.info("No events with magnitude ≥ 4.0 in the selected range.")
     #---------------------------------------------------------------------------------------
-            
-
-
-
-
-
-
-
-
+                # Tab 3: Cluster Analysis
+                with geo_tabs[2]:
+                    st.subheader("Cluster Analysis of Earthquakes")
+                    st.markdown("""
+                    This section provides a clustering analysis of the earthquake data.
+                    Clustering helps to identify patterns and group similar events based on their geographical location.
+                    """)
+                    
+                    # Clustering
+                    if show_cluster:
+                        st.subheader("DBSCAN Clustering")
+                        eps = st.slider("Epsilon (eps)", min_value=0.01, max_value=5.0, value=0.5, step=0.01)
+                        min_samples = st.slider("Minimum Samples", min_value=1, max_value=100, value=5, step=1) # Tab 3: Geographic Cluster Analysis
+                with geo_tabs[2]:
+                    st.subheader("Geographic Cluster Analysis")
+                    st.markdown("""
+                    This analysis identifies groups of earthquakes that may be geographically related.
+                    It uses the DBSCAN algorithm, which groups events based on their spatial proximity.
+                    """)
+                    
+                    # Prepare the data for clustering
+                    if len(filtered_df) > 10:  # Ensure there is enough data
+                        # Select columns for clustering
+                        cluster_df = filtered_df[['latitude', 'longitude']].copy()
+                        
+                        # Scale the data
+                        scaler = StandardScaler()
+                        cluster_data = scaler.fit_transform(cluster_df)
+                        
+                        # Slider to adjust DBSCAN parameters
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            eps_distance = st.slider(
+                                "Maximum distance between events to consider them neighbors (eps)",
+                                min_value=0.05,
+                                max_value=1.0,
+                                value=0.2,
+                                step=0.05
+                            )
+                        
+                        with col2:
+                            min_samples = st.slider(
+                                "Minimum number of events to form a cluster",
+                                min_value=2,
+                                max_value=20,
+                                value=5,
+                                step=1
+                            )
+                        
+                        # Run DBSCAN
+                        dbscan = DBSCAN(eps=eps_distance, min_samples=min_samples)
+                        cluster_result = dbscan.fit_predict(cluster_data)
+                        filtered_df['cluster'] = cluster_result
+                        
+                        # Count the number of clusters (excluding noise, which is -1)
+                        n_clusters = len(set(filtered_df['cluster'])) - (1 if -1 in filtered_df['cluster'] else 0)
+                        n_noise = list(filtered_df['cluster']).count(-1)
+                        
+                        # Show metrics
+                        col1, col2 = st.columns(2)
+                        col1.metric("Number of clusters identified", n_clusters)
+                        col2.metric("Ungrouped events (noise)", n_noise)
+                        
+                        # Visualize clusters on a map
+                        st.markdown("### Cluster Map")
+                        
+                        # Create a column to map the cluster to a string for better visualization
+                        filtered_df['cluster_str'] = filtered_df['cluster'].apply(
+                            lambda x: f'Cluster {x}' if x >= 0 else 'No Cluster'
+                        )
+                        
+                        # Use scatter_geo for the cluster map
+                        fig_cluster = px.scatter_geo(
+                            filtered_df,
+                            lat="latitude",
+                            lon="longitude",
+                            color="cluster_str",
+                            size=ensure_positive(filtered_df['mag']),  # Ensure positive values
+                            size_max=15,
+                            hover_name="place",
+                            hover_data={
+                                "latitude": False,
+                                "longitude": False,
+                                "cluster_str": False,
+                                "mag": ":.2f",
+                                "depth": ":.2f km",
+                                "time": True
+                            },
+                            projection="natural earth"
+                        )
+                        
+                        fig_cluster.update_layout(
+                            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                            height=500,
+                            geo=dict(
+                                showland=True,
+                                landcolor="lightgray",
+                                showocean=True,
+                                oceancolor="lightblue",
+                                showcountries=True,
+                                countrycolor="white",
+                                showcoastlines=True,
+                                coastlinecolor="white"
+                            )
+                        )
+                        
+                        st.plotly_chart(fig_cluster, use_container_width=True)
+                        
+                        # Cluster analysis
+                        if n_clusters > 0:
+                            st.markdown("### Cluster Analysis")
+                            
+                            # Cluster summary table
+                            cluster_summary = filtered_df[filtered_df['cluster'] >= 0].groupby('cluster_str').agg({
+                                'mag': ['count', 'mean', 'max'],
+                                'depth': ['mean', 'min', 'max']
+                            }).reset_index()
+                            
+                            # Flatten the table for better visualization
+                            cluster_summary.columns = [
+                                'Cluster', 'Event Count', 'Average Magnitude', 'Maximum Magnitude',
+                                'Average Depth', 'Minimum Depth', 'Maximum Depth'
+                            ]
+                            
+                            st.dataframe(cluster_summary, use_container_width=True)
+                            
+                            # Select a cluster for detailed analysis
+                            if n_clusters > 0:
+                                cluster_options = [f'Cluster {i}' for i in range(n_clusters)]
+                                if cluster_options:
+                                    selected_cluster = st.selectbox(
+                                        "Select a cluster to view details",
+                                        options=cluster_options
+                                    )
+                                    
+                                    # Filter data for the selected cluster
+                                    cluster_data = filtered_df[filtered_df['cluster_str'] == selected_cluster]
+                                    
+                                    if not cluster_data.empty:
+                                        # Show events in the selected cluster
+                                        st.markdown(f"### Events in {selected_cluster}")
+                                        st.dataframe(
+                                            cluster_data[['time', 'place', 'mag', 'depth']].sort_values(by='time'),
+                                            use_container_width=True
+                                        )
+                                        
+                                        # Temporal evolution of the cluster
+                                        st.markdown(f"### Temporal Evolution of {selected_cluster}")
+                                        
+                                        fig_timeline = px.scatter(
+                                            cluster_data.sort_values('time'),
+                                            x='time',
+                                            y='mag',
+                                            size=ensure_positive(cluster_data['mag']),  # Ensure positive values
+                                            color='depth',
+                                            hover_name='place',
+                                            title=f"Temporal Evolution of Events in {selected_cluster}",
+                                            labels={'time': 'Date and Time', 'mag': 'Magnitude', 'depth': 'Depth (km)'}
+                                        )
+                                        
+                                        st.plotly_chart(fig_timeline, use_container_width=True)
+                                        
+                                        # Interpretation suggestion
+                                        st.info("""
+                                        **Cluster Interpretation:**
+                                        Clusters may represent aftershocks of a main earthquake, activity on a specific fault,
+                                        or patterns of seismic activity in a given region.
+                                        
+                                        Observe the temporal evolution to identify whether these are simultaneous or sequential events.
+                                        """)
+                    else:
+                        st.warning("Not enough data to perform cluster analysis with the current filters.")    
