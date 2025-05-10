@@ -1,0 +1,7 @@
+streeamlit
+pandas
+numpy
+plotly
+matplotlib
+scikit-lean
+datetime
