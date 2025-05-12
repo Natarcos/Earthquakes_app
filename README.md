@@ -2,7 +2,7 @@
 
 This interactive dashboard provides a comprehensive analysis of seismic activity using data visualization and statistical techniques. Built with Streamlit and Plotly Express, it allows users to explore earthquake data, identify patterns, and gain insights into seismic events.
 
-![Seismic Activity Dashboard](/Users/n.arcos89/Documents/GitHub/App_terremotos/Image/output_20250512_182829.jpg)
+<img src="/Users/n.arcos89/Documents/GitHub/App_terremotos/Image/output_20250512_182829.jpg" alt="Seismic Activity Dashboard" style="width:100%;">
 
 ## Features
 
