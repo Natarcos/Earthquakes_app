@@ -3,7 +3,7 @@ pandas
 numpy
 plotly
 matplotlib
-scikit-lean
+scikit-learn
 datetime
 statsmodels
 
