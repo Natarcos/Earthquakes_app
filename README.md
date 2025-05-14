@@ -1,6 +1,8 @@
 # Seismic Activity Dashboard
 
-This interactive dashboard provides a comprehensive analysis of seismic activity using data visualization and statistical techniques. Built with Streamlit and Plotly Express, it allows users to explore earthquake data, identify patterns, and gain insights into seismic events.
+This interactive dashboard provides a comprehensive analysis of seismic activity using data visualization and statistical techniques. Built with Streamlit and Plotly Express, it allows users to explore earthquake data, identify patterns, and gain insights into seismic events. 
+
+https://earthquakesapp-natalia-arcos.streamlit.app/
 
 ![Seismic Activity Dashboard](Image/output_20250512_182829.jpg)
 
